@@ -14,6 +14,24 @@ from PIL import Image
 from config import config
 from models import ChatModel
 
+from os import getenv
+import os
+
+from langchain_community.chat_models import BedrockChat
+
+AWS_ACCESS_KEY_ID=getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY=getenv("AWS_SECRET_ACCESS_KEY")
+# AWS_SESSION_TOKEN=getenv("AWS_SESSION_TOKEN")
+# region = {'region_name':'eu-west-3'}
+# os.environ["AWS_DEFALUT_REGION"]='eu-west-3'
+
+regions = {
+    "US West (Oregon)": "us-west-2",
+    "Europe (Frankfurt)": "eu-central-1",
+    "Europe (Paris)": "eu-west-3",
+}
+
+
 INIT_MESSAGE = {
     "role": "assistant",
     "content": "Hi! I'm your AI Bot on Bedrock. How may I help you?",
@@ -58,13 +76,16 @@ def render_sidebar() -> Tuple[float, float, int, int, int, str]:
     """
     with st.sidebar:
         st.markdown("## Inference Parameters")
+        region=regions[st.selectbox("Region",list(regions.keys()),index=2)]
         model_name_select = st.selectbox(
             'Model',
             list(config["models"].keys()),
             key=f"{st.session_state['widget_key']}_Model_Id",
+            index=1,
         )
 
         st.session_state["model_name"] = model_name_select
+        st.session_state["region"] = region
 
         model_config = config["models"][model_name_select]
 
@@ -319,7 +340,8 @@ def main() -> None:
     st.sidebar.button("New Chat", on_click=new_chat, type="primary")
 
     model_kwargs, memory_window = render_sidebar()
-    chat_model = ChatModel(st.session_state["model_name"], model_kwargs)
+    chat_model = ChatModel(st.session_state["model_name"],st.session_state["region"], model_kwargs)
+    # chat_model = BedrockChat({**model_kwargs,"region_name":'eu-west-3'})
     conv_chain = init_conversationchain(chat_model, memory_window)
 
     # Image uploader
